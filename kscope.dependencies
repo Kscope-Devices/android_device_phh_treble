@@ -1,0 +1,8 @@
+[
+    {
+        "remote":       "github",
+        "repository":   "phhusson/vendor_hardware_overlay",
+        "target_path":  "vendor/hardware_overlay",
+        "branch":       "pie"
+    }
+]

@@ -1,3 +1,7 @@
+# Soong namespaces
+PRODUCT_SOONG_NAMESPACES += \
+    $(LOCAL_PATH)
+
 #Huawei devices don't declare fingerprint and telephony hardware feature
 #TODO: Proper detection
 PRODUCT_COPY_FILES := \
@@ -8,12 +12,9 @@ PRODUCT_COPY_FILES := \
 	frameworks/native/data/etc/android.hardware.bluetooth_le.xml:system/etc/permissions/android.hardware.bluetooth_le.xml \
 	frameworks/native/data/etc/android.hardware.usb.host.xml:system/etc/permissions/android.hardware.usb.host.xml \
 
-BOARD_PLAT_PRIVATE_SEPOLICY_DIR += device/phh/treble/sepolicy
 PRODUCT_PACKAGE_OVERLAYS += device/phh/treble/overlay
 
 $(call inherit-product, vendor/hardware_overlay/overlay.mk)
-$(call inherit-product, $(SRC_TARGET_DIR)/product/core_64_bit.mk)
-$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
 
 #Those overrides are here because Huawei's init read properties
 #from /system/etc/prop.default, then /vendor/build.prop, then /system/build.prop
@@ -24,7 +25,6 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 	ro.build.version.all_codenames=$(PLATFORM_VERSION_ALL_CODENAMES) \
 	ro.build.version.release=$(PLATFORM_VERSION) \
 	ro.build.version.security_patch=$(PLATFORM_SECURITY_PATCH) \
-	ro.adb.secure=0 \
 	ro.logd.auditd=true
 	
 #Huawei HiSuite (also other OEM custom programs I guess) it's of no use in AOSP builds
@@ -125,8 +125,6 @@ PRODUCT_COPY_FILES += \
 	device/phh/treble/files/bv9500plus-mtk-kpd.kl:system/phh/bv9500plus-mtk-kpd.kl \
 	device/phh/treble/files/moto-liber-gpio-keys.kl:system/phh/moto-liber-gpio-keys.kl
 
-SELINUX_IGNORE_NEVERALLOWS := true
-
 # Universal NoCutoutOverlay
 PRODUCT_PACKAGES += \
     NoCutoutOverlay
@@ -212,5 +210,3 @@ PRODUCT_PACKAGES += \
 PRODUCT_COPY_FILES += \
 	frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration_7_0.xml:system/etc/a2dp_audio_policy_configuration_7_0.xml \
 	frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:system/etc/a2dp_audio_policy_configuration.xml \
-
-include build/make/target/product/gsi_release.mk

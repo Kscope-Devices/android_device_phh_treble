@@ -716,7 +716,7 @@ copyprop() {
         resetprop_phh "$1" "$(getprop "$2")"
     fi
 }
-if [ -f /system/phh/secure ] || [ -f /metadata/phh/secure ];then
+if [ -f /system/phh/secure ] || [ -f /metadata/phh/secure ] || true;then
     copyprop ro.build.device ro.vendor.build.device
     copyprop ro.system.build.fingerprint ro.vendor.build.fingerprint
     copyprop ro.bootimage.build.fingerprint ro.vendor.build.fingerprint
