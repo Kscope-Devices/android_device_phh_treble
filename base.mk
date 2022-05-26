@@ -8,10 +8,6 @@ PRODUCT_COPY_FILES := \
 	frameworks/native/data/etc/android.hardware.bluetooth_le.xml:system/etc/permissions/android.hardware.bluetooth_le.xml \
 	frameworks/native/data/etc/android.hardware.usb.host.xml:system/etc/permissions/android.hardware.usb.host.xml \
 
-#Use a more decent APN config
-PRODUCT_COPY_FILES += \
-	device/sample/etc/apns-full-conf.xml:system/etc/apns-conf.xml
-
 BOARD_PLAT_PRIVATE_SEPOLICY_DIR += device/phh/treble/sepolicy
 PRODUCT_PACKAGE_OVERLAYS += device/phh/treble/overlay
 
@@ -89,12 +85,6 @@ PRODUCT_PACKAGES += \
     simg2img_simple \
     lptools
 
-ifneq (,$(wildcard external/exfat))
-PRODUCT_PACKAGES += \
-	mkfs.exfat \
-	fsck.exfat
-endif
-
 PRODUCT_PACKAGES += \
 	android.hidl.manager-V1.0-java \
 	android.hardware.wifi.hostapd-V1.0-java \
@@ -165,8 +155,8 @@ PRODUCT_PACKAGES += \
 	resetprop_phh
 
 PRODUCT_COPY_FILES += \
-	device/phh/treble/phh-securize.sh:system/bin/phh-securize.sh \
-	device/phh/treble/files/ota.sh:system/bin/ota.sh \
+	device/phh/treble/empty:system/bin/phh-securize.sh \
+	device/phh/treble/empty:system/bin/ota.sh \
 
 PRODUCT_COPY_FILES += \
 	device/phh/treble/remove-telephony.sh:system/bin/remove-telephony.sh \
@@ -206,13 +196,6 @@ PRODUCT_SYSTEM_DEFAULT_PROPERTIES += \
 	persist.sys.fflag.override.settings_provider_model=false \
 	ro.setupwizard.mode=OPTIONAL \
 
-PRODUCT_PRODUCT_PROPERTIES += \
-	ro.setupwizard.mode=OPTIONAL \
-
-# AOSP overlays
-PRODUCT_PACKAGES += \
-    NavigationBarMode2ButtonOverlay
-
 PRODUCT_PACKAGES += \
 	oplus-alert-slider
 
@@ -223,8 +206,6 @@ PRODUCT_COPY_FILES += \
 	device/phh/treble/proprietary-files/gome/fs16xx_01s_right.preset:system/phh/gome/fs16xx_01s_right.preset \
 	device/phh/treble/proprietary-files/umidigi/fs16xx_01s_mono.preset:system/phh/umidigi/fs16xx_01s_mono.preset
 
-PRODUCT_PACKAGES += phh-ota
-
 PRODUCT_PACKAGES += \
     xiaomi-touch
 
@@ -233,7 +214,3 @@ PRODUCT_COPY_FILES += \
 	frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:system/etc/a2dp_audio_policy_configuration.xml \
 
 include build/make/target/product/gsi_release.mk
-
-# Protect deskclock from power save
-PRODUCT_COPY_FILES += \
-	device/phh/treble/files/com.android.deskclock_whitelist.xml:system/etc/sysconfig/com.android.deskclock_whitelist.xml
