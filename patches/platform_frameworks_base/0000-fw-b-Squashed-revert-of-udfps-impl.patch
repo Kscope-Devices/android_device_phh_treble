@@ -1,0 +1,482 @@
+From 062ed6fad93928563e1fcbcab7d5f365ffb2c3d3 Mon Sep 17 00:00:00 2001
+From: alk3pInjection <5e147612@kscope.ink>
+Date: Fri, 27 May 2022 09:43:00 +0800
+Subject: [PATCH] fw/b: Squashed revert of udfps impl
+
+Change-Id: I4479801e8549cae15d4b9a7b6b2472280859f978
+---
+ .../fingerprint/IUdfpsOverlayController.aidl  |   3 -
+ packages/SystemUI/proguard.flags              |   3 -
+ .../res/drawable-nodpi/udfps_icon_pressed.png | Bin 108 -> 0 bytes
+ .../SystemUI/res/values/kscope_config.xml     |  40 ---------
+ .../biometrics/AuthContainerView.java         |   2 +-
+ .../biometrics/DummyUdfpsHbmProvider.kt       |  32 -------
+ .../systemui/biometrics/UdfpsController.java  |  82 +-----------------
+ .../systemui/biometrics/UdfpsSurfaceView.java |  16 +---
+ .../systemui/biometrics/UdfpsView.java        |   7 +-
+ .../systemui/dagger/SystemUIModule.java       |  14 +--
+ .../hidl/FingerprintAuthenticationClient.java |   9 --
+ 11 files changed, 10 insertions(+), 198 deletions(-)
+ delete mode 100644 packages/SystemUI/res/drawable-nodpi/udfps_icon_pressed.png
+ delete mode 100644 packages/SystemUI/src/com/android/systemui/biometrics/DummyUdfpsHbmProvider.kt
+
+diff --git a/core/java/android/hardware/fingerprint/IUdfpsOverlayController.aidl b/core/java/android/hardware/fingerprint/IUdfpsOverlayController.aidl
+index f5d9a76e50e3..648edda62171 100644
+--- a/core/java/android/hardware/fingerprint/IUdfpsOverlayController.aidl
++++ b/core/java/android/hardware/fingerprint/IUdfpsOverlayController.aidl
+@@ -40,7 +40,4 @@ oneway interface IUdfpsOverlayController {
+ 
+     // Shows debug messages on the UDFPS overlay.
+     void setDebugMessage(int sensorId, String message);
+-
+-    // Useful for Legacy devices not having dedicated aod sensor
+-    void onAcquired(int sensorId, int acquiredInfo, int vendorCode);
+ }
+diff --git a/packages/SystemUI/proguard.flags b/packages/SystemUI/proguard.flags
+index 8cb2580aa210..61147281da6f 100644
+--- a/packages/SystemUI/proguard.flags
++++ b/packages/SystemUI/proguard.flags
+@@ -24,9 +24,6 @@
+ -keep class com.android.systemui.tv.TvSystemUIFactory
+ -keep class * extends com.android.systemui.SystemUI
+ -keep class * implements com.android.systemui.SystemUI$Injector
+--keep class * implements com.android.systemui.biometrics.UdfpsHbmProvider {
+-    public <init>(...);
+-}
+ 
+ -keepclasseswithmembers class * {
+     public <init>(android.content.Context, android.util.AttributeSet);
+diff --git a/packages/SystemUI/res/drawable-nodpi/udfps_icon_pressed.png b/packages/SystemUI/res/drawable-nodpi/udfps_icon_pressed.png
+deleted file mode 100644
+index 4102e28c1300b49323b50625d8cfaa73b006561f..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 108
+zcmeAS@N?(olHy`uVBq!ia0vp^j3CUx1|;Q0k8}bl$r9IylHmNblJdl&R0hYC{G?O`
+z&)mfH)S%SFl*+=BsWw1Ge4Z|jAr-fh5*U~o7?>FtSQ!{^cTT<plwt66^>bP0l+XkK
+D@OB!I
+
+diff --git a/packages/SystemUI/res/values/kscope_config.xml b/packages/SystemUI/res/values/kscope_config.xml
+index 2fed6c725cdb..659dde1b12c2 100644
+--- a/packages/SystemUI/res/values/kscope_config.xml
++++ b/packages/SystemUI/res/values/kscope_config.xml
+@@ -15,50 +15,10 @@
+      limitations under the License.
+ -->
+ <resources>
+-    <!-- Color of the UDFPS pressed view -->
+-    <color name="config_udfpsColor">#ffffffff</color>
+-
+-    <!-- HBM type of UDFPS overlay.
+-            0 - GLOBAL HBM
+-            1 - LOCAL HBM
+-    -->
+-    <integer name="config_udfpsHbmType">1</integer>
+-
+-    <!-- Udfps HBM provider class name -->
+-    <string name="config_udfpsHbmProviderComponent">com.android.systemui.biometrics.DummyUdfpsHbmProvider</string>
+-
+-    <!-- Udfps vendor code -->
+-    <integer name="config_udfpsVendorCode">0</integer>
+-
+     <!-- Allow devices override audio panel location to the left side -->
+     <bool name="config_audioPanelOnLeftSide">false</bool>
+ 
+     <!-- Location indicator excludelist -->
+     <string-array name="config_locationIndicatorExcludelist" translatable="false">
+     </string-array>
+-
+-    <!-- Flag to enable framework dimming for udfps -->
+-    <bool name="config_udfpsFrameworkDimming">false</bool>
+-
+-    <!-- Array of brightness-alpha lut for framework dimming -->
+-    <string-array name="config_udfpsDimmingBrightnessAlphaArray" translatable="false">
+-        <!-- Example:
+-            <item>0,255</item>
+-            <item>1,234</item>
+-            <item>3,227</item>
+-            <item>8,208</item>
+-            <item>16,192</item>
+-            <item>27,176</item>
+-            <item>41,160</item>
+-            <item>61,144</item>
+-            <item>80,128</item>
+-            <item>104,112</item>
+-            <item>130,96</item>
+-            <item>158,80</item>
+-            <item>188,64</item>
+-            <item>221,48</item>
+-            <item>250,36</item>
+-            <item>255,33</item>
+-        -->
+-    </string-array>
+ </resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/AuthContainerView.java b/packages/SystemUI/src/com/android/systemui/biometrics/AuthContainerView.java
+index fb5a948c6716..fd37b3509a4e 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/AuthContainerView.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/AuthContainerView.java
+@@ -793,7 +793,7 @@ public class AuthContainerView extends LinearLayout
+         final WindowManager.LayoutParams lp = new WindowManager.LayoutParams(
+                 ViewGroup.LayoutParams.MATCH_PARENT,
+                 ViewGroup.LayoutParams.MATCH_PARENT,
+-                WindowManager.LayoutParams.TYPE_DISPLAY_OVERLAY,
++                WindowManager.LayoutParams.TYPE_STATUS_BAR_SUB_PANEL,
+                 windowFlags,
+                 PixelFormat.TRANSLUCENT);
+         lp.privateFlags |= WindowManager.LayoutParams.SYSTEM_FLAG_SHOW_FOR_ALL_USERS;
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/DummyUdfpsHbmProvider.kt b/packages/SystemUI/src/com/android/systemui/biometrics/DummyUdfpsHbmProvider.kt
+deleted file mode 100644
+index a1ec9c2bb76e..000000000000
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/DummyUdfpsHbmProvider.kt
++++ /dev/null
+@@ -1,32 +0,0 @@
+-/*
+- * Copyright (C) 2022 The LineageOS Project
+- *
+- * Licensed under the Apache License, Version 2.0 (the "License");
+- * you may not use this file except in compliance with the License.
+- * You may obtain a copy of the License at
+- *
+- *      http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-
+-package com.android.systemui.biometrics
+-
+-import android.content.Context
+-import android.view.Surface
+-
+-class DummyUdfpsHbmProvider constructor(
+-    private val context: Context
+-): UdfpsHbmProvider {
+-    override fun enableHbm(hbmType: Int, surface: Surface?, onHbmEnabled: Runnable?) {
+-        onHbmEnabled?.run()
+-    }
+-
+-    override fun disableHbm(onHbmDisabled: Runnable?) {
+-        onHbmDisabled?.run()
+-    }
+-}
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+index 2f6216edec47..7181f659a406 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsController.java
+@@ -47,7 +47,6 @@ import android.os.RemoteException;
+ import android.os.Trace;
+ import android.os.VibrationEffect;
+ import android.os.Vibrator;
+-import android.provider.Settings;
+ import android.util.Log;
+ import android.view.Gravity;
+ import android.view.LayoutInflater;
+@@ -165,10 +164,7 @@ public class UdfpsController implements DozeReceiver {
+     private Runnable mAodInterruptRunnable;
+     private boolean mOnFingerDown;
+     private boolean mAttemptedToDismissKeyguard;
+-    private final int mUdfpsVendorCode;
+     private Set<Callback> mCallbacks = new HashSet<>();
+-    private boolean mFrameworkDimming;
+-    private int[][] mBrightnessAlphaArray;
+ 
+     @VisibleForTesting
+     public static final AudioAttributes VIBRATION_SONIFICATION_ATTRIBUTES =
+@@ -324,19 +320,6 @@ public class UdfpsController implements DozeReceiver {
+                 mView.setDebugMessage(message);
+             });
+         }
+-
+-        @Override
+-        public void onAcquired(int sensorId, int acquiredInfo, int vendorCode) {
+-            mFgExecutor.execute(() -> {
+-                if (acquiredInfo == 6 && (mStatusBarStateController.isDozing() || !mScreenOn)) {
+-                    if (vendorCode == mUdfpsVendorCode) {
+-                        mPowerManager.wakeUp(mSystemClock.uptimeMillis(),
+-                                PowerManager.WAKE_REASON_GESTURE, TAG);
+-                        onAodInterrupt(0, 0, 0, 0); // To-Do pass proper values
+-                    }
+-                }
+-            });
+-        }
+     }
+ 
+     /**
+@@ -443,12 +426,7 @@ public class UdfpsController implements DozeReceiver {
+                     // We need to persist its ID to track it during ACTION_MOVE that could include
+                     // data for many other pointers because of multi-touch support.
+                     mActivePointerId = event.getPointerId(0);
+-                    final int idx = mActivePointerId == -1
+-                            ? event.getPointerId(0)
+-                            : event.findPointerIndex(mActivePointerId);
+                     mVelocityTracker.addMovement(event);
+-                    onFingerDown((int) event.getRawX(), (int) event.getRawY(),
+-                            (int) event.getTouchMinor(idx), (int) event.getTouchMajor(idx));
+                     handled = true;
+                 }
+                 if ((withinSensorArea || fromUdfpsView) && shouldTryToDismissKeyguard()) {
+@@ -594,7 +572,7 @@ public class UdfpsController implements DozeReceiver {
+             @NonNull ScreenLifecycle screenLifecycle,
+             @Nullable Vibrator vibrator,
+             @NonNull UdfpsHapticsSimulator udfpsHapticsSimulator,
+-            @NonNull UdfpsHbmProvider hbmProvider,
++            @NonNull Optional<UdfpsHbmProvider> hbmProvider,
+             @NonNull KeyguardStateController keyguardStateController,
+             @NonNull KeyguardBypassController keyguardBypassController,
+             @NonNull DisplayManager displayManager,
+@@ -623,7 +601,7 @@ public class UdfpsController implements DozeReceiver {
+         mPowerManager = powerManager;
+         mAccessibilityManager = accessibilityManager;
+         mLockscreenShadeTransitionController = lockscreenShadeTransitionController;
+-        mHbmProvider = hbmProvider;
++        mHbmProvider = hbmProvider.orElse(null);
+         screenLifecycle.addObserver(mScreenObserver);
+         mScreenOn = screenLifecycle.getScreenState() == ScreenLifecycle.SCREEN_ON;
+         mKeyguardBypassController = keyguardBypassController;
+@@ -645,7 +623,7 @@ public class UdfpsController implements DozeReceiver {
+                 });
+ 
+         mCoreLayoutParams = new WindowManager.LayoutParams(
+-                WindowManager.LayoutParams.TYPE_DISPLAY_OVERLAY,
++                WindowManager.LayoutParams.TYPE_KEYGUARD_DIALOG,
+                 0 /* flags set in computeLayoutParams() */,
+                 PixelFormat.TRANSLUCENT);
+         mCoreLayoutParams.setTitle(TAG);
+@@ -654,11 +632,6 @@ public class UdfpsController implements DozeReceiver {
+         mCoreLayoutParams.layoutInDisplayCutoutMode =
+                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS;
+         mCoreLayoutParams.privateFlags = WindowManager.LayoutParams.PRIVATE_FLAG_TRUSTED_OVERLAY;
+-        mCoreLayoutParams.dimAmount = 0;
+-
+-        mFrameworkDimming = mContext.getResources().getBoolean(R.bool.config_udfpsFrameworkDimming);
+-
+-        parseBrightnessAlphaArray();
+ 
+         mFingerprintManager.setUdfpsOverlayController(new UdfpsOverlayController());
+ 
+@@ -667,8 +640,6 @@ public class UdfpsController implements DozeReceiver {
+         context.registerReceiver(mBroadcastReceiver, filter);
+ 
+         udfpsHapticsSimulator.setUdfpsController(this);
+-
+-        mUdfpsVendorCode = mContext.getResources().getInteger(R.integer.config_udfpsVendorCode);
+     }
+ 
+     /**
+@@ -749,7 +720,6 @@ public class UdfpsController implements DozeReceiver {
+         final int paddingY = animation != null ? animation.getPaddingY() : 0;
+ 
+         mCoreLayoutParams.flags = Utils.FINGERPRINT_OVERLAY_LAYOUT_PARAM_FLAGS
+-                | WindowManager.LayoutParams.FLAG_DIM_BEHIND
+                 | WindowManager.LayoutParams.FLAG_SPLIT_TOUCH;
+         if (animation != null && animation.listenForTouchesOutsideView()) {
+             mCoreLayoutParams.flags |= WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH;
+@@ -1032,8 +1002,6 @@ public class UdfpsController implements DozeReceiver {
+             return;
+         }
+ 
+-        updateViewDimAmount(true);
+-
+         if (mView.getAnimationViewController() instanceof UdfpsKeyguardViewController
+                 && !mStatusBarStateController.isDozing()) {
+             mKeyguardBypassController.setUserHasDeviceEntryIntent(true);
+@@ -1078,7 +1046,6 @@ public class UdfpsController implements DozeReceiver {
+         if (mView.isIlluminationRequested()) {
+             mView.stopIllumination();
+         }
+-        updateViewDimAmount(false);
+     }
+ 
+     private void updateTouchListener() {
+@@ -1095,49 +1062,6 @@ public class UdfpsController implements DozeReceiver {
+         }
+     }
+ 
+-    private static int interpolate(int x, int xa, int xb, int ya, int yb) {
+-        return ya - (ya - yb) * (x - xa) / (xb - xa);
+-    }
+-
+-    private void updateViewDimAmount(boolean pressed) {
+-        if (mFrameworkDimming) {
+-            if (pressed) {
+-                int curBrightness = Settings.System.getInt(mContext.getContentResolver(),
+-                        Settings.System.SCREEN_BRIGHTNESS, 100);
+-                int i, dimAmount;
+-                for (i = 0; i < mBrightnessAlphaArray.length; i++) {
+-                    if (mBrightnessAlphaArray[i][0] >= curBrightness) break;
+-                }
+-                if (i == 0) {
+-                    dimAmount = mBrightnessAlphaArray[i][1];
+-                } else if (i == mBrightnessAlphaArray.length) {
+-                    dimAmount = mBrightnessAlphaArray[i-1][1];
+-                } else {
+-                    dimAmount = interpolate(curBrightness,
+-                            mBrightnessAlphaArray[i][0], mBrightnessAlphaArray[i-1][0],
+-                            mBrightnessAlphaArray[i][1], mBrightnessAlphaArray[i-1][1]);
+-                }
+-                mCoreLayoutParams.dimAmount = dimAmount / 255.0f;
+-            } else {
+-                mCoreLayoutParams.dimAmount = 0;
+-            }
+-            mWindowManager.updateViewLayout(mView, mCoreLayoutParams);
+-        }
+-    }
+-
+-    private void parseBrightnessAlphaArray() {
+-        if (mFrameworkDimming) {
+-            String[] array = mContext.getResources().getStringArray(
+-                    R.array.config_udfpsDimmingBrightnessAlphaArray);
+-            mBrightnessAlphaArray = new int[array.length][2];
+-            for (int i = 0; i < array.length; i++) {
+-                String[] s = array[i].split(",");
+-                mBrightnessAlphaArray[i][0] = Integer.parseInt(s[0]);
+-                mBrightnessAlphaArray[i][1] = Integer.parseInt(s[1]);
+-            }
+-        }
+-    }
+-
+     /**
+      * Callback for fingerUp and fingerDown events.
+      */
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
+index 71e33a699934..77fad35d32d4 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsSurfaceView.java
+@@ -19,7 +19,6 @@ package com.android.systemui.biometrics;
+ import android.annotation.NonNull;
+ import android.annotation.Nullable;
+ import android.content.Context;
+-import android.graphics.drawable.Drawable;
+ import android.graphics.Canvas;
+ import android.graphics.Paint;
+ import android.graphics.PixelFormat;
+@@ -30,8 +29,6 @@ import android.view.Surface;
+ import android.view.SurfaceHolder;
+ import android.view.SurfaceView;
+ 
+-import com.android.systemui.R;
+-
+ /**
+  * Surface View for providing the Global High-Brightness Mode (GHBM) illumination for UDFPS.
+  */
+@@ -57,8 +54,6 @@ public class UdfpsSurfaceView extends SurfaceView implements SurfaceHolder.Callb
+     boolean mAwaitingSurfaceToStartIllumination;
+     boolean mHasValidSurface;
+ 
+-    private Drawable mUdfpsIconPressed;
+-
+     public UdfpsSurfaceView(Context context, AttributeSet attrs) {
+         super(context, attrs);
+ 
+@@ -74,10 +69,8 @@ public class UdfpsSurfaceView extends SurfaceView implements SurfaceHolder.Callb
+ 
+         mSensorPaint = new Paint(0 /* flags */);
+         mSensorPaint.setAntiAlias(true);
+-        mSensorPaint.setColor(context.getColor(R.color.config_udfpsColor));
++        mSensorPaint.setARGB(255, 255, 255, 255);
+         mSensorPaint.setStyle(Paint.Style.FILL);
+-
+-        mUdfpsIconPressed = context.getDrawable(R.drawable.udfps_icon_pressed);
+     }
+ 
+     @Override public void surfaceCreated(SurfaceHolder holder) {
+@@ -141,13 +134,6 @@ public class UdfpsSurfaceView extends SurfaceView implements SurfaceHolder.Callb
+         Canvas canvas = null;
+         try {
+             canvas = mHolder.lockCanvas();
+-            mUdfpsIconPressed.setBounds(
+-                    Math.round(sensorRect.left),
+-                    Math.round(sensorRect.top),
+-                    Math.round(sensorRect.right),
+-                    Math.round(sensorRect.bottom)
+-            );
+-            mUdfpsIconPressed.draw(canvas);
+             canvas.drawOval(sensorRect, mSensorPaint);
+         } finally {
+             // Make sure the surface is never left in a bad state.
+diff --git a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java
+index ee4cb15de410..6d31ef0e7701 100644
+--- a/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java
++++ b/packages/SystemUI/src/com/android/systemui/biometrics/UdfpsView.java
+@@ -51,6 +51,7 @@ public class UdfpsView extends FrameLayout implements DozeReceiver, UdfpsIllumin
+ 
+     private static final String SETTING_HBM_TYPE =
+             "com.android.systemui.biometrics.UdfpsSurfaceView.hbmType";
++    private static final @HbmType int DEFAULT_HBM_TYPE = UdfpsHbmTypes.LOCAL_HBM;
+ 
+     private static final int DEBUG_TEXT_SIZE_PX = 32;
+ 
+@@ -98,11 +99,9 @@ public class UdfpsView extends FrameLayout implements DozeReceiver, UdfpsIllumin
+ 
+         if (Build.IS_ENG || Build.IS_USERDEBUG) {
+             mHbmType = Settings.Secure.getIntForUser(mContext.getContentResolver(),
+-                    SETTING_HBM_TYPE,
+-                    mContext.getResources().getInteger(R.integer.config_udfpsHbmType),
+-                    UserHandle.USER_CURRENT);
++                    SETTING_HBM_TYPE, DEFAULT_HBM_TYPE, UserHandle.USER_CURRENT);
+         } else {
+-            mHbmType = mContext.getResources().getInteger(R.integer.config_udfpsHbmType);
++            mHbmType = DEFAULT_HBM_TYPE;
+         }
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/dagger/SystemUIModule.java b/packages/SystemUI/src/com/android/systemui/dagger/SystemUIModule.java
+index 8adaa98e1a13..12786f278a16 100644
+--- a/packages/SystemUI/src/com/android/systemui/dagger/SystemUIModule.java
++++ b/packages/SystemUI/src/com/android/systemui/dagger/SystemUIModule.java
+@@ -83,7 +83,6 @@ import com.android.systemui.util.time.SystemClock;
+ import com.android.systemui.util.time.SystemClockImpl;
+ import com.android.systemui.wallet.dagger.WalletModule;
+ import com.android.systemui.wmshell.BubblesManager;
+-import com.android.systemui.R;
+ import com.android.wm.shell.bubbles.Bubbles;
+ 
+ import java.util.Optional;
+@@ -176,17 +175,8 @@ public abstract class SystemUIModule {
+     @BindsOptionalOf
+     abstract StatusBar optionalStatusBar();
+ 
+-    @Provides
+-    static UdfpsHbmProvider getUdfpsHbmProvider(Context context) {
+-        String className = context.getString(R.string.config_udfpsHbmProviderComponent);
+-        try {
+-            Class<?> clazz = context.getClassLoader().loadClass(className);
+-            return (UdfpsHbmProvider) clazz.getDeclaredConstructor(
+-                    new Class[] { Context.class }).newInstance(context);
+-        } catch (Throwable t) {
+-            throw new RuntimeException("Error loading UdfpsHbmProvider " + className, t);
+-        }
+-    }
++    @BindsOptionalOf
++    abstract UdfpsHbmProvider optionalUdfpsHbmProvider();
+ 
+     @SysUISingleton
+     @Binds
+diff --git a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
+index c2d2e813cc1e..3058e2508f5f 100644
+--- a/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
++++ b/services/core/java/com/android/server/biometrics/sensors/fingerprint/hidl/FingerprintAuthenticationClient.java
+@@ -101,15 +101,6 @@ class FingerprintAuthenticationClient extends AuthenticationClient<IBiometricsFi
+         return new CompositeCallback(mALSProbeCallback, callback);
+     }
+ 
+-    @Override
+-    public void onAcquired(int acquiredInfo, int vendorCode) {
+-        super.onAcquired(acquiredInfo, vendorCode);
+-        try {
+-            mSensorOverlays.ifUdfps(controller -> controller.onAcquired(getSensorId(), acquiredInfo, vendorCode));
+-        } catch (Exception e) {
+-        }
+-    }
+-
+     @Override
+     public void onAuthenticated(BiometricAuthenticator.Identifier identifier,
+             boolean authenticated, ArrayList<Byte> token) {
+-- 
+2.36.1
+

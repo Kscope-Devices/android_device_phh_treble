@@ -1,0 +1,75 @@
+From ad1ae1abe41fd2b19aa807b3c94e97aac9d2ffe3 Mon Sep 17 00:00:00 2001
+From: alk3pInjection <5e147612@kscope.ink>
+Date: Fri, 27 May 2022 09:43:00 +0800
+Subject: [PATCH] soong: Remove udfps lib
+
+Change-Id: I500622582b74ac63a10b9022ca940252fe98bc05
+---
+ build/soong/Android.bp           | 21 ---------------------
+ target/board/BoardConfigSoong.mk |  5 +----
+ 2 files changed, 1 insertion(+), 25 deletions(-)
+
+diff --git a/build/soong/Android.bp b/build/soong/Android.bp
+index 77792b7..a60d77b 100644
+--- a/build/soong/Android.bp
++++ b/build/soong/Android.bp
+@@ -114,27 +114,6 @@ vendor_init {
+     },
+ }
+ 
+-soong_config_module_type {
+-    name: "surfaceflinger_udfps_lib",
+-    module_type: "cc_defaults",
+-    config_namespace: "kscopeGlobalVars",
+-    value_variables: ["target_surfaceflinger_udfps_lib"],
+-    properties: [
+-        "cppflags",
+-        "whole_static_libs",
+-    ],
+-}
+-
+-surfaceflinger_udfps_lib {
+-    name: "surfaceflinger_udfps_lib_defaults",
+-    soong_config_variables: {
+-        target_surfaceflinger_udfps_lib: {
+-            cppflags: ["-DTARGET_PROVIDES_UDFPS_LIB"],
+-            whole_static_libs: ["%s"],
+-        },
+-    },
+-}
+-
+ soong_config_module_type {
+     name: "camera_needs_client_info_lib",
+     module_type: "cc_defaults",
+diff --git a/target/board/BoardConfigSoong.mk b/target/board/BoardConfigSoong.mk
+index 33c98a9e1..e3b895193 100644
+--- a/target/board/BoardConfigSoong.mk
++++ b/target/board/BoardConfigSoong.mk
+@@ -38,8 +38,7 @@ SOONG_CONFIG_kscopeGlobalVars += \
+     camera_needs_client_info_lib \
+     target_init_vendor_lib \
+     target_ld_shim_libs \
+-    target_process_sdk_version_override \
+-    target_surfaceflinger_udfps_lib
++    target_process_sdk_version_override
+ 
+ SOONG_CONFIG_NAMESPACES += kscopeQcomVars
+ SOONG_CONFIG_kscopeQcomVars += \
+@@ -64,14 +63,12 @@ SOONG_CONFIG_kscopeQcomVars_uses_pre_uplink_features_netmgrd := $(TARGET_USES_PR
+ # Set default values
+ TARGET_ADDITIONAL_GRALLOC_10_USAGE_BITS ?= 0
+ TARGET_INIT_VENDOR_LIB ?= vendor_init
+-TARGET_SURFACEFLINGER_UDFPS_LIB ?= surfaceflinger_udfps_lib
+ 
+ # Soong value variables
+ SOONG_CONFIG_kscopeGlobalVars_additional_gralloc_10_usage_bits := $(TARGET_ADDITIONAL_GRALLOC_10_USAGE_BITS)
+ SOONG_CONFIG_kscopeGlobalVars_target_init_vendor_lib := $(TARGET_INIT_VENDOR_LIB)
+ SOONG_CONFIG_kscopeGlobalVars_target_ld_shim_libs := $(subst $(space),:,$(TARGET_LD_SHIM_LIBS))
+ SOONG_CONFIG_kscopeGlobalVars_target_process_sdk_version_override := $(TARGET_PROCESS_SDK_VERSION_OVERRIDE)
+-SOONG_CONFIG_kscopeGlobalVars_target_surfaceflinger_udfps_lib := $(TARGET_SURFACEFLINGER_UDFPS_LIB)
+ ifneq ($(filter $(QSSI_SUPPORTED_PLATFORMS),$(TARGET_BOARD_PLATFORM)),)
+ SOONG_CONFIG_kscopeQcomVars_qcom_display_headers_namespace := vendor/qcom/opensource/commonsys-intf/display
+ else
+-- 
+2.36.1
+

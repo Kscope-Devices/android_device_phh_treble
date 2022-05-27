@@ -5,7 +5,8 @@ Subject: [PATCH 3/7] Sony has `texfat` exfat fs
 
 ---
  fs/Exfat.cpp | 8 +++++++-
- 1 file changed, 7 insertions(+), 1 deletion(-)
+ main.cpp     | 3 ++-
+ 2 files changed, 9 insertions(+), 2 deletions(-)
 
 diff --git a/fs/Exfat.cpp b/fs/Exfat.cpp
 index 91a4c50..6c49c10 100644
@@ -33,6 +34,20 @@ index 91a4c50..6c49c10 100644
      if (mount(source.c_str(), target.c_str(), fs, mountFlags, mountData.c_str()) == 0) {
          return 0;
      }
+diff --git a/main.cpp b/main.cpp
+index 588bf94..4439a35 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -70,7 +70,8 @@ int main(int argc, char** argv) {
+                << (android::vold::IsFilesystemSupported("exfat") ? " exfat" : "")
+                << (android::vold::IsFilesystemSupported("ext4") ? " ext4" : "")
+                << (android::vold::IsFilesystemSupported("f2fs") ? " f2fs" : "")
+-               << (android::vold::IsFilesystemSupported("vfat") ? " vfat" : "");
++               << (android::vold::IsFilesystemSupported("vfat") ? " vfat" : "")
++               << (android::vold::IsFilesystemSupported("texfat") ? " texfat" : "");
+ 
+     VolumeManager* vm;
+     NetlinkManager* nm;
 -- 
 2.25.1
 
