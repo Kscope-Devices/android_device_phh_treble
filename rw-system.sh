@@ -742,9 +742,6 @@ if [ -f /system/phh/secure ] || [ -f /metadata/phh/secure ] || true;then
     copyprop ro.product.manufacturer ro.vendor.product.manufacturer
     copyprop ro.system.product.manufacturer ro.product.vendor.manufacturer
     copyprop ro.product.manufacturer ro.product.vendor.manufacturer
-    (getprop ro.vendor.build.security_patch; getprop ro.keymaster.xxx.security_patch) |sort |tail -n 1 |while read v;do
-        [ -n "$v" ] && resetprop_phh ro.build.version.security_patch "$v"
-    done
 
     resetprop_phh ro.build.tags release-keys
     resetprop_phh ro.boot.vbmeta.device_state locked
